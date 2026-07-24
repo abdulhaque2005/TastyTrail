@@ -3,6 +3,15 @@
 # dependencies
 node_modules/
 
+# IDE / Editor
+.vscode/
+.idea/
+
+# AI tools
+.claude/
+CLAUDE.md
+AGENTS.md
+
 # Expo
 .expo/
 dist/
