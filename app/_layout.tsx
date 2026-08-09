@@ -1,12 +1,13 @@
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../global.css";
 import { Stack } from "expo-router";
-
 import { ClerkProvider, useAuth } from "@clerk/clerk-expo";
 import { ConvexReactClient } from "convex/react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
 import { StatusBar } from "expo-status-bar";
-import React from "react";
+import React, { useEffect } from "react";
+import { tokenCache } from "../lib/cache";
+import { initNotifications, registerForPushNotifications, scheduleDailyMealReminder } from "../lib/notification";
 
 const publicKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY!;
 const convexUrl = process.env.EXPO_PUBLIC_CONVEX_URL!;
@@ -23,14 +24,7 @@ const convex = new ConvexReactClient(convexUrl, {
   unsavedChangesWarning: false,
 });
 
-function ConvexClerkProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) 
-
-
-{
+function ConvexClerkProvider({ children }: { children: React.ReactNode }) {
   const { sessionId } = useAuth();
 
   return (
@@ -44,20 +38,39 @@ function ConvexClerkProvider({
   );
 }
 
-import { tokenCache } from "../lib/cache";
+function NotificationSetup() {
+  useEffect(() => {
+    async function setup() {
+      await initNotifications();
+      registerForPushNotifications();
+      scheduleDailyMealReminder();
+    }
+    setup();
+  }, []);
+
+  return null;
+}
+
+import { StripeProvider } from '@stripe/stripe-react-native';
+
+const stripePublishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
 export default function Layout() {
   return (
     <SafeAreaProvider>
       <ClerkProvider publishableKey={publicKey} tokenCache={tokenCache}>
         <ConvexClerkProvider>
-          <StatusBar  style="dark"/>
-          <Stack  screenOptions={{
-            headerShown:false,
-            contentStyle:{
-              backgroundColor:"#fff8ef"
-            }
-          }} />
+          <StripeProvider publishableKey={stripePublishableKey}>
+            <NotificationSetup />
+            <StatusBar style="dark" />
+            <Stack screenOptions={{
+              headerShown: false,
+              contentStyle: {
+                backgroundColor: "#fff8ef"
+              },
+              animation: 'slide_from_right',
+            }} />
+          </StripeProvider>
         </ConvexClerkProvider>
       </ClerkProvider>
     </SafeAreaProvider>

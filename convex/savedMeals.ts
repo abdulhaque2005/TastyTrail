@@ -47,7 +47,7 @@ export const getSavedMeals = query({
     handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
         if (!identity) {
-            throw new Error("not logged in")
+            return [];
         }
         const userId = identity.subject;
         return await ctx.db.query("savedMeals")

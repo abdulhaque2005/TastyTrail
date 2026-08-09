@@ -1,50 +1,99 @@
-# Welcome to your Expo app 👋
+# 🍽️ TastyTrail
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A beautiful meal discovery app built with React Native & Expo. Browse thousands of recipes, save your favorites, and get daily meal inspiration.
 
-## Get started
+## ✨ Features
 
-1. Install dependencies
+- **🔍 Discover Meals** — Browse by category (Chicken, Dessert, Vegetarian, Pasta, etc.)
+- **🔎 Search** — Find any meal by name instantly
+- **❤️ Save Favorites** — Save meals to your personal collection (synced to cloud)
+- **🔔 Daily Reminders** — Get a notification at noon for meal inspiration
+- **🔐 Google Auth** — Secure sign-in with Google via Clerk
+- **📱 Smooth Animations** — Premium UI with staggered fade-in animations
 
+## 🛠️ Tech Stack
+
+| Technology | Purpose |
+|---|---|
+| **React Native** (0.81) | Cross-platform mobile framework |
+| **Expo** (SDK 54) | Build tooling & native modules |
+| **Expo Router** | File-based navigation |
+| **NativeWind** | Tailwind CSS for React Native |
+| **Clerk** | Authentication (Google SSO) |
+| **Convex** | Backend database (saved meals) |
+| **Reanimated** | Smooth animations |
+| **Zustand** | Client state management |
+| **TheMealDB API** | Recipe data source |
+
+## 📂 Project Structure
+
+```
+TastyTrail/
+├── app/                  # Screens (file-based routing)
+│   ├── index.tsx         # Home screen
+│   ├── _layout.tsx       # Root layout + providers
+│   ├── sso-callback.tsx  # OAuth callback
+│   ├── auth/
+│   │   └── sign-in.tsx   # Google sign-in
+│   └── (tabs)/
+│       ├── _layout.tsx   # Tab bar config
+│       ├── index.tsx     # Discover meals
+│       ├── saved.tsx     # Saved meals
+│       └── profile.tsx   # User profile
+├── constant/             # Theme colors, shadows, categories
+├── convex/               # Backend schema & mutations
+├── lib/                  # Auth, cache, notifications
+├── services/             # API calls (TheMealDB)
+├── store/                # Zustand state
+└── types/                # TypeScript types
+```
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- Expo CLI
+- Clerk account (for auth)
+- Convex account (for backend)
+
+### Setup
+
+1. **Clone the repo**
+   ```bash
+   git clone https://github.com/abdulhaque2005/TastyTrail.git
+   cd TastyTrail
+   ```
+
+2. **Install dependencies**
    ```bash
    npm install
    ```
 
-2. Start the app
+3. **Set up environment variables**
+   ```bash
+   cp .env.example .env
+   ```
+   Fill in your Clerk and Convex keys in `.env`
 
+4. **Start the Convex backend**
+   ```bash
+   npx convex dev
+   ```
+
+5. **Start the app**
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+## 📱 Screenshots
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+> Coming soon — Run the app to see the beautiful UI!
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## 📄 License
 
-## Get a fresh project
+This project is for educational and personal use.
 
-When you're ready, run:
+---
 
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Built with ❤️ by [Abdul Haque](https://github.com/abdulhaque2005)

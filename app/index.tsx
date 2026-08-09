@@ -1,170 +1,193 @@
-import { COLORS, RADIUS, SHADOWS, SPACING } from "@/constant/Theme";
-import { View, Text, Pressable, Image, ScrollView } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowRight, ChefHat, Compass, Heart, LogIn, Sparkle, Sparkles, User, UtensilsCrossed } from 'lucide-react-native';
-import { useAuth, useUser } from "@clerk/clerk-expo";
-import { useRouter } from "expo-router";
-import *as Haptics from 'expo-haptics'
-import { LinearGradient } from 'expo-linear-gradient'
-import { Ionicons } from "@expo/vector-icons";
-export default function Index() {
-  const { isLoaded, isSignedIn } = useAuth()
-  const { user } = useUser()
-  const router = useRouter();
-  const goToSignIn = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push("/auth/sign-in")
-  }
-  const gotoProfile = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push('/(tabs)/profile');
-  }
-  const handleTheNavigatePage = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push('/(tabs)');
-  }
-  const handleTheNavigateSavePage = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)
-    router.push('/(tabs)/saved');
-  }
+import React, { useRef, useState, useEffect } from 'react';
+import { View, Text, Pressable, useWindowDimensions, FlatList, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useAuth, useUser } from '@clerk/clerk-expo';
+import { BlurView } from 'expo-blur';
+import Animated, { FadeInDown, FadeIn, useAnimatedStyle, interpolate, Extrapolation, useSharedValue, withSpring } from 'react-native-reanimated';
+import { Sparkles, MapPin, Zap, ArrowRight, ArrowLeft } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
+import { COLORS, SHADOWS, GRADIENTS } from '@/constant/Theme';
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
+const ONBOARDING_DATA = [
+    {
+        id: '1',
+        title: 'AI-Powered Discovery',
+        subtitle: 'Tell us your mood or budget, and our AI will find the perfect meal for you instantly.',
+        icon: Sparkles,
+        color: '#F97316'
+    },
+    {
+        id: '2',
+        title: 'Smart Meal Combos',
+        subtitle: 'Our AI generates the best value combinations so you eat better and save more.',
+        icon: Zap,
+        color: '#22C55E'
+    },
+    {
+        id: '3',
+        title: 'Live Kitchen Queue',
+        subtitle: 'Track your order from the kitchen to your doorstep with real-time ETA.',
+        icon: MapPin,
+        color: '#3B82F6'
+    }
+];
 
-      <View className="flex-row items-center justify-between px-6 pt-2">
-        <View className="flex-row items-center gap-2 rounded-full bg-white px-4 py-2">
-          <ChefHat size={16} color={COLORS.primary} strokeWidth={2.5} />
-          <Text className="text-sm font-semibold">TestMate</Text>
-        </View>
-        {
-          isLoaded && isSignedIn ? (
+const PaginationDot = ({ index, scrollX, width }: { index: number; scrollX: any; width: number }) => {
+    const animatedDotStyle = useAnimatedStyle(() => {
+        const widthAnim = interpolate(
+            scrollX.value,
+            [(index - 1) * width, index * width, (index + 1) * width],
+            [8, 24, 8],
+            Extrapolation.CLAMP
+        );
+        const opacityAnim = interpolate(
+            scrollX.value,
+            [(index - 1) * width, index * width, (index + 1) * width],
+            [0.3, 1, 0.3],
+            Extrapolation.CLAMP
+        );
+        return { width: widthAnim, opacity: opacityAnim };
+    });
 
-            <Pressable onPress={gotoProfile} style={SHADOWS.soft} className="flex-row items-center rounded-full gap-2 bg-white px-3 py-2">
+    return (
+        <Animated.View
+            style={[
+                { height: 8, borderRadius: 4, backgroundColor: '#F97316' },
+                animatedDotStyle
+            ]}
+        />
+    );
+};
 
-              {
-                user?.imageUrl ?
-                  (
-                    <Image source={{ uri: user.imageUrl }}
-                      style={{ width: 28, height: 28, borderRadius: 14 }} />
-                  )
-                  :
-                  <View className="h-8 w-8 items-center justify-center rounded-full bg-[#ffedd5]">
-                    <User size={19} color={COLORS.primary} strokeWidth={2.5}></User>
-                  </View>
+export default function OnboardingScreen() {
+    const { width, height } = useWindowDimensions();
+    const { isLoaded, isSignedIn } = useAuth();
+    const [currentIndex, setCurrentIndex] = useState(0);
+    const scrollX = useSharedValue(0);
+    const flatListRef = useRef<FlatList>(null);
 
-              }
-
-            </Pressable>
-
-
-          )
-            : (isLoaded ? <Pressable className="flex-row items-center gap-2 rounded-full py-2 px-4 bg-white opacity-80"
-              style={SHADOWS.soft} onPress={goToSignIn}
-            >
-              <LogIn size={15} color={COLORS.primary} strokeWidth={2.5}></LogIn>
-              <Text className="text-sm font-semibold">Sign In</Text>
-            </Pressable> : null)
+    // If user is already signed in, go straight to tabs
+    useEffect(() => {
+        if (isLoaded && isSignedIn) {
+            router.replace('/(tabs)');
         }
+    }, [isLoaded, isSignedIn]);
 
-      </View>
+    if (!isLoaded || isSignedIn) return null; // Avoid flashing
 
-      <ScrollView className="flex-1" contentContainerClassName="pb-10 px-6 pt-6" showsHorizontalScrollIndicator={false}>
-        <Text className="text-[42px] font-bold leading-[48px] text-black">
-          Find your next {"\n"} Craving
-        </Text>
-        <LinearGradient colors={['#F97316', '#FB923C', '#FDBA74']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[{
-          marginTop: SPACING.lg,
-          borderRadius: RADIUS.xl,
-          padding: SPACING.lg,
-          overflow: "hidden",
-          minHeight: 220
-        },
-        SHADOWS.soft
-        ]} >
+    const handleNext = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (currentIndex < ONBOARDING_DATA.length - 1) {
+            flatListRef.current?.scrollToIndex({ index: currentIndex + 1, animated: true });
+        } else {
+            router.push('/auth/sign-in');
+        }
+    };
 
-          <View className="mb-4 h-14 w-14 items-center justify-center">
-            <UtensilsCrossed size={35} color={"#ffffff"} strokeWidth={3} />
+    const handleSkip = () => {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        router.push('/auth/sign-in');
+    };
 
-          </View>
-          <Text className="text-[26px] font-bold leading-7 text-white">
-            Tonight's pick awaits
-          </Text>
-          <Text className="mt-2 max-w-[85%] text-sm leading-5 text-white">
-            Explore thousands of recipes from around the world
-          </Text>
-          <Pressable onPress={handleTheNavigatePage} className="mt-5  flex-row items-center gap-2 self-start rounded-full bg-white px-5 py-3 active:opacity-90 ">
-            <Text className=" font-bold text-[#f97316]">
-              Explore Now
-            </Text>
-            <ArrowRight size={14} strokeWidth={2.5} color={COLORS.primary} />
-          </Pressable>
-
-        </LinearGradient>
-
-        <Text className="mt-8 text-lg font-bold text-black">
-          Everything you need
-        </Text>
-        <View className="mt-3 flex-row gap-3">
-          <Pressable onPress={handleTheNavigatePage} className="flex-1 rounded-3xl bg-white p-4 active:opacity-90" style={[SHADOWS.soft, { minHeight: 200 }]}>
-            <View className="h-11 w-11 items-center justify-center rounded-2xl bg-[#ffedd5]">
-              <Compass size={20} strokeWidth={2.5} color={COLORS.primary} />
+    return (
+        <View style={{ flex: 1, backgroundColor: '#111827' }}>
+            {/* Background Gradient Orbs */}
+            <View style={[StyleSheet.absoluteFillObject, { overflow: 'hidden' }]}>
+                <View style={{ position: 'absolute', top: -50, right: -100, width: 350, height: 350, borderRadius: 175, backgroundColor: 'rgba(249,115,22,0.15)' }} />
+                <View style={{ position: 'absolute', bottom: -50, left: -50, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(59,130,246,0.1)' }} />
             </View>
 
-            <Text className="mt-5 text-[19px] font-extrabold tracking-[-0.4px] text-[#111827]">
-              Discover Meals
-            </Text>
+            <SafeAreaView style={{ flex: 1 }}>
+                <View style={{ flex: 1 }}>
+                    <View style={{ position: 'absolute', top: 20, right: 20, zIndex: 10 }}>
+                        <Pressable onPress={handleSkip} style={{ padding: 10 }}>
+                            <Text style={{ color: '#9CA3AF', fontWeight: 'bold' }}>Skip</Text>
+                        </Pressable>
+                    </View>
 
-            <View className="mt-2 h-1 w-12 rounded-full bg-[#F97316]" />
+                    <Animated.FlatList
+                        ref={flatListRef}
+                        data={ONBOARDING_DATA}
+                        keyExtractor={item => item.id}
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        bounces={false}
+                        onScroll={(e) => {
+                            scrollX.value = e.nativeEvent.contentOffset.x;
+                        }}
+                        scrollEventThrottle={16}
+                        onMomentumScrollEnd={(e) => {
+                            const index = Math.round(e.nativeEvent.contentOffset.x / width);
+                            setCurrentIndex(index);
+                        }}
+                        renderItem={({ item, index }) => {
+                            const Icon = item.icon;
+                            return (
+                                <View style={{ width, flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
+                                    
+                                    {/* Icon Container with Glassmorphism */}
+                                    <Animated.View entering={FadeInDown.duration(600).delay(100)} style={{ marginBottom: 40 }}>
+                                        <View style={{ width: 160, height: 160, borderRadius: 80, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.1)' }}>
+                                            <BlurView intensity={20} tint="dark" style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.05)' }}>
+                                                <LinearGradient
+                                                    colors={[`${item.color}40`, 'transparent']}
+                                                    style={StyleSheet.absoluteFillObject}
+                                                />
+                                                <Icon size={64} color={item.color} strokeWidth={1.5} />
+                                            </BlurView>
+                                        </View>
+                                    </Animated.View>
 
-            <Text className="mt-3 text-[11px] font-bold uppercase tracking-[2px] text-[#F97316]">
-              Explore • Cook • Enjoy
-            </Text>
+                                    {/* Text Content */}
+                                    <Animated.View entering={FadeInDown.duration(600).delay(200)} style={{ alignItems: 'center' }}>
+                                        <Text style={{ color: 'white', fontSize: 28, fontWeight: '900', marginBottom: 15, textAlign: 'center' }}>
+                                            {item.title}
+                                        </Text>
+                                        <Text style={{ color: '#9CA3AF', fontSize: 16, lineHeight: 24, textAlign: 'center' }}>
+                                            {item.subtitle}
+                                        </Text>
+                                    </Animated.View>
+                                </View>
+                            );
+                        }}
+                    />
+                </View>
 
-            <Text className="mt-4 text-[14px] leading-6 text-[#64748B]">
-              Browse thousands of recipes,
-              {"\n"}
-              discover new flavors, and enjoy
-              {"\n"}
-              every meal you make.
-            </Text>
+                {/* Bottom Controls */}
+                <View style={{ paddingHorizontal: 30, paddingBottom: 40, paddingTop: 20 }}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                        
+                        {/* Pagination Dots */}
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                            {ONBOARDING_DATA.map((_, index) => (
+                                <PaginationDot key={index} index={index} scrollX={scrollX} width={width} />
+                            ))}
+                        </View>
 
-          </Pressable>
-
-          <View className="flex-1 gap-3">
-
-            <Pressable onPress={handleTheNavigateSavePage} className='flex-1 rounded-3xl bg-white p-4 active:opacity-90' style={[SHADOWS.soft, { minHeight: 200 }]}>
-              <View className="h-9 w-9 items-center justify-center rounded-2xl bg-[#dcfce7]">
-                <Heart size={19} strokeWidth={2.5} color={COLORS.secondary} />
-              </View>
-
-              <Text className="mt-4 text-base font-bold text-[#1f2933] ">
-                Saved Meals
-              </Text>
-              <Text className="mt-1 text-xs leading-4 text-[#6b7280] ">
-
-                {isSignedIn
-                  ? "View your saved meals"
-                  : "Sign in to save your meals"
-                }
-              </Text>
-            </Pressable>
-
-            <View className="flex-1 rounded-3xl bg-white p-4 " style={SHADOWS.soft}>
-              <View className="h-10 w-10 items-center justify-center rounded-2xl bg-[#fef3c7]">
-                <Sparkles size={18} strokeWidth={2.5} color="#d97706" />
-              </View>
-              <Text className="mt-4 text-base font-bold text-[#1f2933] ">
-                Chef's Choice
-              </Text>
-              <Text className="mt-1 text-xs leading-4 text-[#6b7280] ">
-                Today's Special
-              </Text>
-            </View>
-          </View>
+                        {/* Next / Get Started Button */}
+                        <Pressable
+                            onPress={handleNext}
+                            style={{
+                                backgroundColor: '#F97316',
+                                paddingHorizontal: 24,
+                                paddingVertical: 14,
+                                borderRadius: 30,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 8
+                            }}
+                        >
+                            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
+                                {currentIndex === ONBOARDING_DATA.length - 1 ? 'Get Started' : 'Next'}
+                            </Text>
+                            <ArrowRight size={20} color="white" strokeWidth={2.5} />
+                        </Pressable>
+                    </View>
+                </View>
+            </SafeAreaView>
         </View>
-      </ScrollView>
-
-
-    </SafeAreaView>
-  );
+    );
 }

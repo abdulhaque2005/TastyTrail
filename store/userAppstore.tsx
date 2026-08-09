@@ -1,6 +1,5 @@
-import { action } from '@/convex/_generated/server';
 import {create} from 'zustand'
-export type PendingAuthAction = "save-meal"|"saved-page" | null;
+export type PendingAuthAction = "save-meal"|"saved-page"|"add-to-cart"| null;
 type AppStore = {
     PendingAuthAction : PendingAuthAction;
     setPendingAuthAction :(action :PendingAuthAction)=> void;
