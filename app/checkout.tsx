@@ -242,9 +242,14 @@ export default function CheckoutScreen() {
                 }
             });
             
-        } catch (err) {
+        } catch (err: any) {
             console.error("Order error", err);
-            Alert.alert("Checkout Failed", "Could not place your order. Please try again.");
+            const msg = err.message || "";
+            if (msg.includes("Stripe is not configured")) {
+                Alert.alert("Payment Error", "Stripe is not configured. Please use Cash on Delivery (COD) or Wallet for testing.");
+            } else {
+                Alert.alert("Checkout Failed", "Could not place your order. Please try again.");
+            }
         } finally {
             setIsPlacingOrder(false);
         }

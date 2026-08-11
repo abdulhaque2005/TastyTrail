@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import * as Haptics from 'expo-haptics';
 import { Image } from "expo-image";
 import { Sparkles, MapPin, ShoppingCart, Star, Bell, SlidersHorizontal, ChevronDown, Heart, Package, Clock } from "lucide-react-native";
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, FadeInRight } from 'react-native-reanimated';
 import { LinearGradient } from "expo-linear-gradient";
 import { useAuth, useUser } from "@clerk/clerk-expo";
 import { useConvexAuth, useQuery, useMutation } from "convex/react";
@@ -17,6 +17,15 @@ import { MealListItem } from "@/types/meals";
 import { getMealsByCategory, searchMealsByName } from "@/services/mealsApi";
 import { generatePrice } from "@/lib/pricing";
 import { COLORS, SHADOWS } from "@/constant/Theme";
+import SkeletonCard from "@/components/SkeletonCard";
+import AnimatedCard from "@/components/AnimatedCard";
+import AutoScrollBanner from "@/components/AutoScrollBanner";
+
+const QUICK_FILTERS = ['Sort', 'Fast Delivery', 'Great Offers', 'Rating 4.0+', 'Pure Veg'];
+const PROMO_BANNERS = [
+    { id: 1, title: '50% OFF on Top Rated Dishes', tag: 'AI Combo', image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000' },
+    { id: 2, title: 'Free Delivery on First 5 Orders', tag: 'New User', image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=1000' },
+];
 
 export default function NextGenHomeScreen() {
     const { user } = useUser();
@@ -27,6 +36,7 @@ export default function NextGenHomeScreen() {
     const [searchQuery, setSearchQuery] = useState("");
     const [loading, setLoading] = useState(true);
     const [meals, setMeals] = useState<MealListItem[]>([]);
+    const [activeFilter, setActiveFilter] = useState<string | null>(null);
     const [aiThinking, setAiThinking] = useState(false);
     const hasAutoDetected = useRef(false);
 
@@ -129,6 +139,7 @@ export default function NextGenHomeScreen() {
     useEffect(() => {
         if (searchQuery.trim().length > 0) return;
         loadMeals(isSelected);
+        setActiveFilter(null); // Reset filter when category changes
     }, [isSelected, searchQuery]);
 
     useEffect(() => {
@@ -145,6 +156,38 @@ export default function NextGenHomeScreen() {
         setSearchQuery("");
         setSelected(cat);
     };
+
+    const handleFilterToggle = (filter: string) => {
+        Haptics.selectionAsync();
+        setActiveFilter(prev => prev === filter ? null : filter);
+    };
+
+    const filteredMeals = useMemo(() => {
+        let result = [...meals];
+        
+        if (activeFilter === 'Sort') {
+            result.sort((a, b) => {
+                const priceA = generatePrice(a.strCategory ?? isSelected, a.idMeal);
+                const priceB = generatePrice(b.strCategory ?? isSelected, b.idMeal);
+                return priceA - priceB;
+            });
+        } else if (activeFilter === 'Fast Delivery') {
+            result = result.filter(m => parseInt(m.idMeal) % 2 === 0);
+        } else if (activeFilter === 'Great Offers') {
+            result = result.filter(m => parseInt(m.idMeal) % 3 === 0);
+        } else if (activeFilter === 'Rating 4.0+') {
+            result = result.filter(m => parseInt(m.idMeal) % 4 !== 0);
+        } else if (activeFilter === 'Pure Veg') {
+            const nonVeg = ['Chicken', 'Beef', 'Pork', 'Seafood', 'Lamb'];
+            if (nonVeg.includes(isSelected) && !searchQuery) {
+                result = [];
+            } else {
+                result = result.filter(m => parseInt(m.idMeal) % 2 !== 0);
+            }
+        }
+        
+        return result;
+    }, [meals, activeFilter, isSelected, searchQuery]);
 
     const isSearching = searchQuery.trim().length > 0;
 
@@ -217,27 +260,29 @@ export default function NextGenHomeScreen() {
                 </View>
             </View>
 
+            {/* Quick Filters (Pills) */}
+            <View className="bg-white border-b border-gray-100 pb-3 shadow-sm">
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 20, gap: 10 }}>
+                    {QUICK_FILTERS.map((filter, index) => {
+                        const isActive = activeFilter === filter;
+                        return (
+                            <Animated.View key={index} entering={FadeInRight.delay(index * 100)}>
+                                <Pressable 
+                                    onPress={() => handleFilterToggle(filter)}
+                                    className={`px-4 py-1.5 rounded-full border ${isActive ? 'bg-orange-50 border-orange-500' : 'border-gray-200 bg-white'}`}
+                                >
+                                    <Text className={`text-[13px] font-bold ${isActive ? 'text-orange-600' : 'text-gray-700'}`}>{filter}</Text>
+                                </Pressable>
+                            </Animated.View>
+                        );
+                    })}
+                </ScrollView>
+            </View>
+
             <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
                 
-                {/* Promotional Banner */}
-                {!isSearching && (
-                    <Animated.View entering={FadeInDown.duration(600).delay(100)} className="px-5 mt-5">
-                        <View className="rounded-3xl overflow-hidden h-40 relative shadow-sm" style={SHADOWS.medium}>
-                            <Image 
-                                source={{ uri: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?q=80&w=1000' }} 
-                                style={{ width: '100%', height: '100%' }} 
-                                contentFit="cover" 
-                            />
-                            <LinearGradient colors={['rgba(0,0,0,0.7)', 'transparent']} start={{ x: 0, y: 0.5 }} end={{ x: 1, y: 0.5 }} style={{ position: 'absolute', width: '100%', height: '100%' }} />
-                            <View className="absolute top-0 left-0 p-5 w-2/3 h-full justify-center">
-                                <View className="bg-orange-500 rounded-md self-start px-2 py-1 mb-2">
-                                    <Text className="text-[10px] font-black text-white uppercase tracking-wider">AI Combo</Text>
-                                </View>
-                                <Text className="text-xl font-black text-white">50% OFF on Top Rated Dishes</Text>
-                            </View>
-                        </View>
-                    </Animated.View>
-                )}
+                {/* Promotional Banner Carousel (Auto-Scrolling) */}
+                {!isSearching && <AutoScrollBanner />}
 
                 {/* Recent Orders */}
                 {!isSearching && activeOrders.length > 0 && (
@@ -313,52 +358,76 @@ export default function NextGenHomeScreen() {
                     </View>
 
                     {loading ? (
-                        <View className="items-center py-20">
-                            <ActivityIndicator size="large" color="#f97316" />
+                        <View className="mt-2">
+                            {[1, 2, 3].map((key) => (
+                                <SkeletonCard key={key} />
+                            ))}
                         </View>
-                    ) : meals.length === 0 ? (
+                    ) : filteredMeals.length === 0 ? (
                         <View className="items-center py-20">
                             <Text className="text-gray-400 font-medium">No meals found for this criteria.</Text>
                         </View>
                     ) : (
-                        <View className="flex-row flex-wrap justify-between gap-y-5">
-                            {meals.map((m, index) => {
+                        <View className="flex-col gap-y-5">
+                            {filteredMeals.map((m, index) => {
                                 const isSaved = savedMealIds.has(m.idMeal);
                                 const price = generatePrice(m.strCategory ?? isSelected, m.idMeal);
+                                const rating = (4.0 + (parseInt(m.idMeal) % 10) / 10).toFixed(1);
+                                const reviewsCount = 50 + (parseInt(m.idMeal) % 250);
+                                
                                 return (
-                                    <View
-                                        key={m.idMeal}
-                                        className="bg-white rounded-[20px] overflow-hidden border border-gray-100"
-                                        style={[{ width: '47%' }, SHADOWS.soft]}
-                                    >
-                                        <Pressable onPress={() => { Haptics.selectionAsync(); router.push(`/meal/${m.idMeal}`); }} className="active:opacity-80">
-                                            <View className="h-40 w-full relative">
+                                    <Animated.View key={m.idMeal} entering={FadeInDown.delay(index * 100).springify()}>
+                                        <AnimatedCard
+                                            onPress={() => { Haptics.selectionAsync(); router.push(`/meal/${m.idMeal}`); }}
+                                        >
+                                            <View 
+                                                className="bg-white rounded-[20px] overflow-hidden border border-gray-100"
+                                                style={[{ width: '100%' }, SHADOWS.soft]}
+                                            >
+                                                <View className="h-56 w-full relative">
                                                 <Image source={{ uri: m.strMealThumb }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
                                                 <LinearGradient colors={['rgba(0,0,0,0.5)', 'transparent']} style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 40 }} />
                                                 
                                                 {/* Saved Icon */}
-                                                <View className="absolute top-2 right-2 bg-white/20 p-1.5 rounded-full" style={{ backdropFilter: 'blur(10px)' }}>
-                                                    <Heart size={14} color={isSaved ? "#ef4444" : "#ffffff"} fill={isSaved ? "#ef4444" : "transparent"} strokeWidth={isSaved ? 0 : 2} />
+                                                <View className="absolute top-3 right-3 bg-white/20 p-2 rounded-full" style={{ backdropFilter: 'blur(10px)' }}>
+                                                    <Heart size={18} color={isSaved ? "#ef4444" : "#ffffff"} fill={isSaved ? "#ef4444" : "transparent"} strokeWidth={isSaved ? 0 : 2} />
                                                 </View>
                                                 
                                                 {/* Rating Badge */}
-                                                <View className="absolute bottom-2 left-2 bg-white/95 px-1.5 py-0.5 rounded-md flex-row items-center gap-1">
-                                                    <Star size={10} color="#f59e0b" fill="#f59e0b" />
-                                                    <Text className="text-[10px] font-bold text-gray-800">4.8</Text>
+                                                <View className="absolute bottom-3 left-3 bg-white/95 px-2 py-1 rounded-lg flex-row items-center gap-1.5 shadow-sm">
+                                                    <Star size={12} color="#f59e0b" fill="#f59e0b" />
+                                                    <Text className="text-[11px] font-bold text-gray-800">{rating} ({reviewsCount}+)</Text>
                                                 </View>
                                             </View>
                                             
-                                            <View className="px-3 pt-2 pb-3">
-                                                <Text className="text-[13px] font-bold text-gray-800 leading-4 mb-1" numberOfLines={2}>{m.strMeal}</Text>
-                                                <View className="flex-row items-center justify-between mt-auto pt-1">
-                                                    <Text className="text-[14px] font-black text-orange-500">₹{price}</Text>
-                                                    <View className="bg-orange-50 h-6 w-6 rounded-full items-center justify-center">
-                                                        <Sparkles size={10} color="#f97316" />
+                                            <View className="px-4 pt-3 pb-4">
+                                                <View className="flex-row items-start justify-between">
+                                                    <View className="flex-1 pr-3">
+                                                        <Text className="text-[17px] font-black text-gray-800 leading-6" numberOfLines={1}>{m.strMeal}</Text>
+                                                        <Text className="text-[12px] text-gray-500 mt-1 leading-4" numberOfLines={2}>
+                                                            {['A delightful and authentic culinary experience prepared with rich spices.', 'Chef’s special preparation, perfectly cooked and seasoned to perfection.', 'A hearty, rich, and comforting meal to satisfy all your cravings.', 'Signature dish with a perfect balance of flavors and authentic taste.'][parseInt(m.idMeal) % 4]}
+                                                        </Text>
+                                                    </View>
+                                                    <View className="items-end pl-2">
+                                                        <Text className="text-[18px] font-black text-orange-500">₹{price}</Text>
                                                     </View>
                                                 </View>
+                                                
+                                                {/* Meta tags (Time & Delivery) */}
+                                                <View className="flex-row items-center mt-3 gap-3">
+                                                    <View className="flex-row items-center gap-1 bg-gray-50 px-2 py-1 rounded-md">
+                                                        <Clock size={11} color="#6b7280" />
+                                                        <Text className="text-[11px] font-bold text-gray-600">30-40 min</Text>
+                                                    </View>
+                                                    <View className="flex-row items-center gap-1 bg-green-50 px-2 py-1 rounded-md border border-green-100">
+                                                        <Package size={11} color="#16a34a" />
+                                                        <Text className="text-[11px] font-bold text-green-700">Free Delivery</Text>
+                                                    </View>
+                                                </View>
+                                                </View>
                                             </View>
-                                        </Pressable>
-                                    </View>
+                                        </AnimatedCard>
+                                    </Animated.View>
                                 );
                             })}
                         </View>

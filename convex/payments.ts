@@ -4,10 +4,8 @@ import { v } from "convex/values";
 import { action } from "./_generated/server";
 import Stripe from "stripe";
 
-// Initialize Stripe with the secret key from environment variables
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
-  apiVersion: "2024-12-18.acacia",
-});
+// We instantiate Stripe lazily inside the action to avoid Convex deploy-time errors
+// if the environment variable is not set.
 
 export const createPaymentIntent = action({
   args: {
@@ -16,6 +14,15 @@ export const createPaymentIntent = action({
     orderId: v.optional(v.string()), // Optional metadata
   },
   handler: async (ctx, args) => {
+    const secretKey = process.env.STRIPE_SECRET_KEY;
+    if (!secretKey || secretKey.startsWith("sk_test_YOUR_STRIPE") || secretKey === "") {
+      throw new Error("Stripe is not configured. Please use Cash on Delivery (COD) or Wallet for testing.");
+    }
+
+    const stripe = new Stripe(secretKey, {
+      apiVersion: "2026-07-29.dahlia" as any,
+    });
+    
     // 1. Verify user is authenticated
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
